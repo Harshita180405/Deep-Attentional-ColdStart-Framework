@@ -1,0 +1,17 @@
+# DACSF — Python dependencies
+# Install with:  pip install -r requirements.txt
+#
+# PyTorch CPU build (recommended for quick setup, replace with CUDA/DirectML as needed):
+#   pip install torch --index-url https://download.pytorch.org/whl/cpu
+#
+# For NVIDIA GPU:
+#   pip install torch --index-url https://download.pytorch.org/whl/cu121
+#
+# For AMD GPU on Windows (DirectML):
+#   pip install torch-directml
+
+torch                 # install separately — see notes above
+flask>=3.0
+numpy>=1.24
+pandas>=2.0
+scikit-learn>=1.3

@@ -1,0 +1,207 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>DACSF — Deep Attentional Cold-Start Framework</title>
+<link href="https://fonts.googleapis.com/css2?family=Space+Mono:ital,wght@0,400;0,700;1,400&family=Syne:wght@400;600;700;800&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="/static/css/style.css">
+</head>
+<body>
+<div class="shell">
+
+  <!-- ── Header ── -->
+  <header>
+    <div class="logo">
+      <div class="logo-mark">D</div>
+      <div class="logo-text">
+        <h1>DACSF</h1>
+        <p>Deep Attentional Cold-Start Framework</p>
+      </div>
+    </div>
+    <div class="status-badge idle" id="status-badge">
+      <div class="dot"></div>
+      <span id="status-text">Idle</span>
+    </div>
+  </header>
+
+  <!-- ── Main grid ── -->
+  <div class="grid">
+
+    <!-- ══ LEFT COLUMN ══ -->
+    <div>
+
+      <!-- Config card -->
+      <div class="card">
+        <div class="card-title">Configuration</div>
+        <div class="field">
+          <label>Dataset</label>
+          <select id="cfg-dataset">
+            <option value="ml100k">MovieLens 100K</option>
+          </select>
+        </div>
+        <div class="field">
+          <label>Training Epochs</label>
+          <input type="number" id="cfg-epochs" value="20" min="1" max="100">
+        </div>
+        <div class="field">
+          <label>Latent Dimension (d)</label>
+          <input type="number" id="cfg-dim" value="64" min="8" max="256">
+        </div>
+        <div class="field">
+          <label>Learning Rate (η)</label>
+          <input type="number" id="cfg-lr" value="0.001" step="0.0001">
+        </div>
+        <div class="field">
+          <label>Dropout Rate</label>
+          <input type="number" id="cfg-dropout" value="0.2" step="0.05" min="0" max="0.9">
+        </div>
+        <div class="field">
+          <label>Cold-Start Threshold (τ)</label>
+          <input type="number" id="cfg-tau" value="5" min="1" max="50">
+        </div>
+        <div class="field">
+          <label>Top-K</label>
+          <input type="number" id="cfg-k" value="10" min="1" max="50">
+        </div>
+        <button class="btn btn-primary" id="btn-train" onclick="startTraining()" style="width:100%">
+          ▶ &nbsp;Train DACSF
+        </button>
+      </div>
+
+      <!-- Recommend card -->
+      <div class="card">
+        <div class="card-title">Generate Recommendations</div>
+        <div class="field">
+          <label>User ID (0 – <span id="max-user">609</span>)</label>
+          <input type="number" id="rec-user" value="0" min="0">
+        </div>
+        <div class="field">
+          <label>Top-K Results</label>
+          <input type="number" id="rec-k" value="10" min="1" max="50">
+        </div>
+        <button class="btn btn-ghost" id="btn-reco" onclick="getRecos()"
+                style="width:100%" disabled>
+          ✦ &nbsp;Recommend
+        </button>
+      </div>
+
+      <!-- Terminal -->
+      <div class="card">
+        <div class="card-title">Training Log</div>
+        <div class="terminal" id="terminal">
+          <div style="color:#2a4a5a">$ dacsf --mode train --dataset ml100k</div>
+          <div style="color:#2a4a5a">Waiting to start…</div>
+        </div>
+      </div>
+
+    </div>
+
+    <!-- ══ RIGHT COLUMN ══ -->
+    <div>
+
+      <!-- Progress card -->
+      <div class="card">
+        <div class="card-title">Training Progress</div>
+        <div class="epoch-row">
+          <span>Epoch <span class="epoch-num" id="ep-num">0</span>
+            / <span id="ep-total">20</span></span>
+          <span id="ep-pct">0%</span>
+        </div>
+        <div class="progress-wrap">
+          <div class="progress-bar" id="prog-bar"></div>
+        </div>
+        <div class="metric-grid">
+          <div class="metric-card">
+            <div class="metric-val" id="m-loss">—</div>
+            <div class="metric-label">BPR Loss</div>
+          </div>
+          <div class="metric-card teal">
+            <div class="metric-val" id="m-ndcg">—</div>
+            <div class="metric-label">NDCG@10</div>
+          </div>
+          <div class="metric-card coral">
+            <div class="metric-val" id="m-mae">—</div>
+            <div class="metric-label">MAE</div>
+          </div>
+          <div class="metric-card amber">
+            <div class="metric-val" id="m-rmse">—</div>
+            <div class="metric-label">RMSE</div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Chart card -->
+      <div class="card">
+        <div class="card-title">Training Curves</div>
+        <div class="tabs">
+          <div class="tab active" onclick="switchChart('ndcg',this)">NDCG@10</div>
+          <div class="tab" onclick="switchChart('loss',this)">Loss</div>
+          <div class="tab" onclick="switchChart('mae',this)">MAE</div>
+          <div class="tab" onclick="switchChart('rmse',this)">RMSE</div>
+        </div>
+        <div class="chart-wrap">
+          <canvas id="chart"></canvas>
+        </div>
+      </div>
+
+      <!-- Results card (hidden until training completes) -->
+      <div class="card" id="results-card" style="display:none">
+        <div class="card-title">Evaluation Results</div>
+        <div class="section-label">All data</div>
+        <div class="metric-grid" style="margin-bottom:1rem">
+          <div class="metric-card coral">
+            <div class="metric-val" id="r-mae">—</div>
+            <div class="metric-label">MAE</div>
+          </div>
+          <div class="metric-card coral">
+            <div class="metric-val" id="r-rmse">—</div>
+            <div class="metric-label">RMSE</div>
+          </div>
+          <div class="metric-card teal">
+            <div class="metric-val" id="r-ndcg">—</div>
+            <div class="metric-label">NDCG@10</div>
+          </div>
+          <div class="metric-card teal">
+            <div class="metric-val" id="r-hr">—</div>
+            <div class="metric-label">HR@10</div>
+          </div>
+        </div>
+        <div class="section-label">Cold-start breakdown</div>
+        <table class="results-table">
+          <thead>
+            <tr><th>Scenario</th><th>NDCG@10</th><th>HR@10</th></tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td>Cold-start users</td>
+              <td class="best" id="r-cu-ndcg">—</td>
+              <td id="r-cu-hr">—</td>
+            </tr>
+            <tr>
+              <td>Cold-start items</td>
+              <td class="best" id="r-ci-ndcg">—</td>
+              <td id="r-ci-hr">—</td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+
+      <!-- Recommendations card (hidden until generated) -->
+      <div class="card" id="reco-card" style="display:none">
+        <div class="card-title">
+          Recommendations for User <span id="reco-user-title">—</span>
+        </div>
+        <div class="reco-list" id="reco-list"></div>
+      </div>
+
+    </div>
+  </div>
+</div>
+
+<div id="toast"></div>
+
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+<script src="/static/js/dashboard.js"></script>
+</body>
+</html>
